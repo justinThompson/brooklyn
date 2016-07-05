@@ -26,6 +26,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ import org.apache.brooklyn.util.text.Strings;
 import org.apache.brooklyn.util.time.Duration;
 import org.apache.brooklyn.util.time.Time;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.io.IOUtils;
 import org.apache.http.ConnectionReuseStrategy;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpRequest;
@@ -103,7 +105,7 @@ public class HttpTool {
      * Caller should {@code connection.getInputStream().close()} the result of this
      * (especially if they are making heavy use of this method).
      */
-    public static URLConnection connectToUrl(String u) throws Exception {
+    public static URLConnection connectToUrl(final String u, final UsernamePasswordCredentials userCredentials) throws Exception {
         final URL url = new URL(u);
         final AtomicReference<Exception> exception = new AtomicReference<Exception>();
 
@@ -117,7 +119,11 @@ public class HttpTool {
                             return true;
                         }
                     });
+
                     URLConnection connection = url.openConnection();
+                    if(userCredentials != null) {
+                        connection.setRequestProperty("Authorization", HttpTool.toBasicAuthorizationValue(userCredentials));
+                    }
                     TrustingSslSocketFactory.configure(connection);
                     connection.connect();
 
@@ -151,10 +157,9 @@ public class HttpTool {
         }
     }
 
+    public static int getHttpStatusCode(String url, final UsernamePasswordCredentials userCredentials) throws Exception {
+        URLConnection connection = connectToUrl(url, userCredentials);
 
-
-    public static int getHttpStatusCode(String url) throws Exception {
-        URLConnection connection = connectToUrl(url);
         long startTime = System.currentTimeMillis();
         int status = ((HttpURLConnection) connection).getResponseCode();
 
@@ -165,7 +170,11 @@ public class HttpTool {
             LOG.debug("connection to {} ({}ms) gives {}", new Object[] { url, (System.currentTimeMillis()-startTime), status });
         return status;
     }
-
+    public static HttpURLConnection getHttpResponse(String url, final UsernamePasswordCredentials userCredentials) throws Exception {
+        URLConnection connection = connectToUrl(url, userCredentials);
+        consumeAndCloseQuietly((HttpURLConnection) connection);
+        return ((HttpURLConnection) connection);
+    }
 
     public static String getContent(String url) {
         try {
@@ -175,9 +184,9 @@ public class HttpTool {
         }
     }
 
-    public static String getErrorContent(String url) {
+    public static String getErrorContent(String url, final UsernamePasswordCredentials auth) {
         try {
-            HttpURLConnection connection = (HttpURLConnection) connectToUrl(url);
+            HttpURLConnection connection = (HttpURLConnection) connectToUrl(url, auth);
             long startTime = System.currentTimeMillis();
 
             String err;
@@ -224,7 +233,7 @@ public class HttpTool {
 
     /** Apache HTTP commons utility for trusting all.
      * <p>
-     * For generic java HTTP usage, see {@link SslTrustUtils#trustAll(java.net.URLConnection)} 
+     * For generic java HTTP usage, see {@link SslTrustUtils#trustAll(java.net.URLConnection)}
      * and static constants in the same class. */
     public static class TrustAllStrategy implements TrustStrategy {
         @Override
@@ -236,7 +245,7 @@ public class HttpTool {
     public static HttpClientBuilder httpClientBuilder() {
         return new HttpClientBuilder();
     }
-    
+
     public static class HttpClientBuilder {
         private ClientConnectionManager clientConnectionManager;
         private HttpParams httpParams;
@@ -321,7 +330,7 @@ public class HttpTool {
         public HttpClient build() {
             final DefaultHttpClient httpClient = new DefaultHttpClient(clientConnectionManager);
             httpClient.setParams(httpParams);
-    
+
             // support redirects for POST (similar to `curl --post301 -L`)
             // http://stackoverflow.com/questions/3658721/httpclient-4-error-302-how-to-redirect
             if (laxRedirect) {
@@ -357,7 +366,7 @@ public class HttpTool {
                     throw Exceptions.propagate(e);
                 }
             }
-    
+
             // Set credentials
             if (uri != null && credentials != null) {
                 String hostname = uri.getHost();
@@ -367,14 +376,14 @@ public class HttpTool {
             if (uri==null && credentials!=null) {
                 LOG.warn("credentials have no effect in builder unless URI for host is specified");
             }
-    
+
             return httpClient;
         }
     }
 
     protected static abstract class HttpRequestBuilder<B extends HttpRequestBuilder<B, R>, R extends HttpRequest> {
         protected R req;
-        
+
         protected HttpRequestBuilder(R req) {
             this.req = req;
         }
@@ -402,7 +411,7 @@ public class HttpTool {
             return req;
         }
     }
-    
+
     protected static abstract class HttpEntityEnclosingRequestBaseBuilder<B extends HttpEntityEnclosingRequestBaseBuilder<B,R>, R extends HttpEntityEnclosingRequestBase> extends HttpRequestBuilder<B, R> {
         protected HttpEntityEnclosingRequestBaseBuilder(R req) {
             super(req);
@@ -415,25 +424,25 @@ public class HttpTool {
             return self();
         }
     }
-    
+
     public static class HttpGetBuilder extends HttpRequestBuilder<HttpGetBuilder, HttpGet> {
         public HttpGetBuilder(URI uri) {
             super(new HttpGet(uri));
         }
     }
-    
+
     public static class HttpHeadBuilder extends HttpRequestBuilder<HttpHeadBuilder, HttpHead> {
         public HttpHeadBuilder(URI uri) {
             super(new HttpHead(uri));
         }
     }
-    
+
     public static class HttpDeleteBuilder extends HttpRequestBuilder<HttpDeleteBuilder, HttpDelete> {
         public HttpDeleteBuilder(URI uri) {
             super(new HttpDelete(uri));
         }
     }
-    
+
     public static class HttpPostBuilder extends HttpEntityEnclosingRequestBaseBuilder<HttpPostBuilder, HttpPost> {
         HttpPostBuilder(URI uri) {
             super(new HttpPost(uri));
@@ -462,7 +471,7 @@ public class HttpTool {
             super(new HttpPut(uri));
         }
     }
-    
+
     public static HttpToolResponse httpGet(HttpClient httpClient, URI uri, Map<String,String> headers) {
         HttpGet req = new HttpGetBuilder(uri).headers(headers).build();
         return execAndConsume(httpClient, req);
@@ -487,17 +496,17 @@ public class HttpTool {
         HttpDelete req = new HttpDeleteBuilder(uri).headers(headers).build();
         return execAndConsume(httpClient, req);
     }
-    
+
     public static HttpToolResponse httpHead(HttpClient httpClient, URI uri, Map<String,String> headers) {
         HttpHead req = new HttpHeadBuilder(uri).headers(headers).build();
         return execAndConsume(httpClient, req);
     }
-    
+
     public static HttpToolResponse execAndConsume(HttpClient httpClient, HttpUriRequest req) {
         long startTime = System.currentTimeMillis();
         try {
             HttpResponse httpResponse = httpClient.execute(req);
-            
+
             try {
                 return new HttpToolResponse(httpResponse, startTime);
             } finally {
@@ -507,7 +516,7 @@ public class HttpTool {
             throw Exceptions.propagate(e);
         }
     }
-    
+
     public static boolean isStatusCodeHealthy(int code) { return (code>=200 && code<=299); }
 
     public static String toBasicAuthorizationValue(UsernamePasswordCredentials credentials) {
@@ -516,14 +525,14 @@ public class HttpTool {
 
     public static String encodeUrlParams(Map<?,?> data) {
         if (data==null) return "";
-        Iterable<String> args = Iterables.transform(data.entrySet(), 
-            new Function<Map.Entry<?,?>,String>() {
-            @Override public String apply(Map.Entry<?,?> entry) {
-                Object k = entry.getKey();
-                Object v = entry.getValue();
-                return URLParamEncoder.encode(Strings.toString(k)) + (v != null ? "=" + URLParamEncoder.encode(Strings.toString(v)) : "");
-            }
-        });
+        Iterable<String> args = Iterables.transform(data.entrySet(),
+                new Function<Map.Entry<?,?>,String>() {
+                    @Override public String apply(Map.Entry<?,?> entry) {
+                        Object k = entry.getKey();
+                        Object v = entry.getValue();
+                        return URLParamEncoder.encode(Strings.toString(k)) + (v != null ? "=" + URLParamEncoder.encode(Strings.toString(v)) : "");
+                    }
+                });
         return Joiner.on("&").join(args);
     }
 }

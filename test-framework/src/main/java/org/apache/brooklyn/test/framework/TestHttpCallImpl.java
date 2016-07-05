@@ -89,7 +89,7 @@ public class TestHttpCallImpl extends TargetableTestComponentImpl implements Tes
                     @Override
                     public Integer get() {
                         try {
-                            return HttpTool.getHttpStatusCode(url);
+                            return HttpTool.getHttpStatusCode(url, null);
                         } catch (Exception e) {
                             LOG.info("HTTP call to [{}] failed due to [{}]", url, e.getMessage());
                             throw Exceptions.propagate(e);

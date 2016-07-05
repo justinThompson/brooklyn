@@ -21,11 +21,14 @@ package org.apache.brooklyn.rest.resources;
 import java.util.List;
 import java.util.Map;
 
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 
 import org.apache.brooklyn.api.entity.Entity;
 import org.apache.brooklyn.api.policy.Policy;
 import org.apache.brooklyn.api.policy.PolicySpec;
+import org.apache.brooklyn.api.typereg.RegisteredType;
 import org.apache.brooklyn.core.policy.Policies;
 import org.apache.brooklyn.rest.api.PolicyApi;
 import org.apache.brooklyn.rest.domain.PolicySummary;
@@ -42,8 +45,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Function;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Maps;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.UriInfo;
 
 @HaHotStateRequired
 public class PolicyResource extends AbstractBrooklynRestResource implements PolicyApi {
@@ -51,6 +52,7 @@ public class PolicyResource extends AbstractBrooklynRestResource implements Poli
     private static final Logger log = LoggerFactory.getLogger(PolicyResource.class);
 
     private @Context UriInfo ui;
+
 
     @Override
     public List<PolicySummary> list( final String application, final String entityToken ) {
@@ -86,10 +88,17 @@ public class PolicyResource extends AbstractBrooklynRestResource implements Poli
         Entity entity = brooklyn().getEntity(application, entityToken);
         Class<? extends Policy> policyType;
         try {
-            policyType = (Class<? extends Policy>) Class.forName(policyTypeName);
-        } catch (ClassNotFoundException e) {
-            throw WebResourceUtils.badRequest("No policy with type %s found", policyTypeName);
-        } catch (ClassCastException e) {
+            log.error(" #### 2: "+mgmt().getTypeRegistry().getAll());
+            log.error(" #### 3: "+mgmt().getTypeRegistry().get(policyTypeName));
+
+            RegisteredType item = mgmt().getTypeRegistry().get(policyTypeName);
+
+            log.error(" #### 4: "+mgmt().getTypeRegistry().createSpec(item, null, PolicySpec.class));
+
+            PolicySpec<?> spec = mgmt().getTypeRegistry().createSpec(item, null, PolicySpec.class);
+
+            policyType =  spec.getType();
+        }  catch (ClassCastException e) {
             throw WebResourceUtils.badRequest("No policy with type %s found", policyTypeName);
         } catch (Exception e) {
             throw Exceptions.propagate(e);

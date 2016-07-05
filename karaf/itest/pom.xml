@@ -19,7 +19,7 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    
+
     <artifactId>brooklyn-itest</artifactId>
     <name>Brooklyn Karaf pax-exam itest</name>
 
@@ -160,12 +160,12 @@
 
         <!-- project deps -->
         <dependency>
-          <groupId>${project.groupId}</groupId>
-          <artifactId>brooklyn-features</artifactId>
-          <version>${project.version}</version>
-          <type>xml</type>
-          <classifier>features</classifier>
-          <scope>test</scope>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>brooklyn-features</artifactId>
+            <version>${project.version}</version>
+            <type>xml</type>
+            <classifier>features</classifier>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -205,6 +205,30 @@
             <groupId>org.ops4j.pax.tinybundles</groupId>
             <artifactId>tinybundles</artifactId>
             <version>${tinybundles.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.brooklyn</groupId>
+            <artifactId>brooklyn-rest-server</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.brooklyn</groupId>
+            <artifactId>brooklyn-rest-client</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.brooklyn</groupId>
+            <artifactId>brooklyn-core</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.brooklyn</groupId>
+            <artifactId>brooklyn-policy</artifactId>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -251,8 +275,8 @@
         <profile>
             <id>Integration</id>
             <properties>
-              <includedTestGroups>org.apache.brooklyn.test.IntegrationTest</includedTestGroups>
-              <excludedTestGroups />
+                <includedTestGroups>org.apache.brooklyn.test.IntegrationTest</includedTestGroups>
+                <excludedTestGroups />
             </properties>
         </profile>
     </profiles>

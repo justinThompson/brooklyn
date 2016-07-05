@@ -89,7 +89,7 @@ public class HttpAsserts {
      */
     public static void assertUrlReachable(String url) {
         try {
-            HttpTool.getHttpStatusCode(url);
+            HttpTool.getHttpStatusCode(url, null);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Interrupted for "+url+" (in assertion that is reachable)", e);
@@ -106,7 +106,7 @@ public class HttpAsserts {
 
     public static void assertUrlUnreachable(String url) {
         try {
-            int statusCode = HttpTool.getHttpStatusCode(url);
+            int statusCode = HttpTool.getHttpStatusCode(url, null);
             Asserts.fail("Expected url " + url + " unreachable, but got status code " + statusCode);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -158,7 +158,7 @@ public class HttpAsserts {
             acceptableCodes.add((Integer)code);
         }
         try {
-            int actualCode = HttpTool.getHttpStatusCode(url);
+            int actualCode = HttpTool.getHttpStatusCode(url, null);
             Asserts.assertTrue(acceptableCodes.contains(actualCode), "code=" + actualCode + "; expected=" + acceptableCodes + "; url=" + url);
             
         } catch (InterruptedException e) {
@@ -213,7 +213,7 @@ public class HttpAsserts {
 
     public static void assertErrorContentContainsText(final String url, final String phrase, final String ...additionalPhrases) {
         try {
-            String contents = HttpTool.getErrorContent(url);
+            String contents = HttpTool.getErrorContent(url, null);
             Asserts.assertTrue(contents != null && contents.length() > 0);
             for (String text: Lists.asList(phrase, additionalPhrases)) {
                 if (!contents.contains(text)) {
@@ -229,7 +229,7 @@ public class HttpAsserts {
 
     public static void assertErrorContentNotContainsText(final String url, final String phrase, final String ...additionalPhrases) {
         try {
-            String err = HttpTool.getErrorContent(url);
+            String err = HttpTool.getErrorContent(url, null);
             Asserts.assertTrue(err != null);
             for (String text: Lists.asList(phrase, additionalPhrases)) {
                 if (err.contains(text)) {
