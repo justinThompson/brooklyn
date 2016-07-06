@@ -88,15 +88,8 @@ public class PolicyResource extends AbstractBrooklynRestResource implements Poli
         Entity entity = brooklyn().getEntity(application, entityToken);
         Class<? extends Policy> policyType;
         try {
-            log.error(" #### 2: "+mgmt().getTypeRegistry().getAll());
-            log.error(" #### 3: "+mgmt().getTypeRegistry().get(policyTypeName));
-
             RegisteredType item = mgmt().getTypeRegistry().get(policyTypeName);
-
-            log.error(" #### 4: "+mgmt().getTypeRegistry().createSpec(item, null, PolicySpec.class));
-
             PolicySpec<?> spec = mgmt().getTypeRegistry().createSpec(item, null, PolicySpec.class);
-
             policyType =  spec.getType();
         }  catch (ClassCastException e) {
             throw WebResourceUtils.badRequest("No policy with type %s found", policyTypeName);

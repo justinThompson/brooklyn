@@ -73,7 +73,7 @@ public class BrooklynRestApiLauncherTest {
     private static final String ROOT_URL = "http://localhost:" + HTTP_PORT;
     private static final String NO_SECURITY_KEY = "brooklyn.webconsole.security.provider";
     private static final String NO_SECURITY_VALUE = "org.apache.brooklyn.rest.security.provider.AnyoneSecurityProvider";
-    private static final String TEST_POLICY = "org.apache.brooklyn.policy.autoscaling.AutoScalerPolicy";
+    private static final String TEST_POLICY = "org.apache.brooklyn.policy.ha.ServiceRestarter";
     private final UsernamePasswordCredentials credentials = new UsernamePasswordCredentials("test", "test");
 
     @Inject
@@ -87,15 +87,11 @@ public class BrooklynRestApiLauncherTest {
     @Filter(timeout = 120000)
     BootFinished bootFinished;
 
-    @BeforeClass()
-    public static void setUp() throws Exception {
-        //api = BrooklynApi.newInstance(ROOT_URL + HTTP_PORT + "/");
-    }
-
     @Configuration
     public static Option[] configuration() throws Exception {
         return defaultOptionsWith(
                 editConfigurationFilePut("etc/org.ops4j.pax.web.cfg", "org.osgi.service.http.port", HTTP_PORT),
+                editConfigurationFilePut("etc/brooklyn.properties", NO_SECURITY_KEY, NO_SECURITY_VALUE),
                 features(KarafTestUtils.brooklynFeaturesRepository(), "brooklyn-software-base")
                 // Uncomment this for remote debugging the tests on port 5005
                 // KarafDistributionOption.debugConfiguration()
@@ -118,7 +114,7 @@ public class BrooklynRestApiLauncherTest {
             }
         });
         HttpAsserts.assertHealthyStatusCode(code);
-        LOG.error("cat compl:" + managementContext.getApplications());
+        HttpAsserts.assertHealthyStatusCode(code);
     }
 
     @Test
@@ -138,11 +134,7 @@ public class BrooklynRestApiLauncherTest {
         headers.put("Content-Type", "application/json");
 
         HttpToolResponse response = HttpTool.httpPost(httpClient, Urls.toUri(testUrl), headers, body.getBytes(CHARSET_NAME));
-        LOG.error("response --> " + response.getContentAsString());
-
         HttpAsserts.assertHealthyStatusCode(response.getResponseCode());
-        LOG.error("all applications --> " + managementContext.getApplications());
-
     }
 
     @Test
@@ -167,16 +159,10 @@ public class BrooklynRestApiLauncherTest {
 
         HttpAsserts.assertHealthyStatusCode(response.getResponseCode());
         Asserts.assertEquals(managementContext.getApplications().size(), responseSize);
-        LOG.error("all applications --> " + managementContext.getApplications());
     }
 
     @Test
     public void testCanAddPolicy() throws Exception {
-        LOG.error("*** *** 1" + managementContext);
-        LOG.error("*** *** 2" + managementContext.getCatalogClassLoader());
-        LOG.error("*** *** 3" + TEST_POLICY);
-        LOG.error("*** *** 5" + managementContext.getTypeRegistry().getAll());
-        LOG.error("*** *** 4" + managementContext.getCatalogClassLoader().loadClass(TEST_POLICY));
         final TestApplication testApplication = ApplicationBuilder.newManagedApp(TestApplication.class, managementContext);
 
         final String testUrl = ROOT_URL + "/v1/applications/" + testApplication.getApplicationId() + "/entities/" + testApplication.getApplicationId() + "/policies?type="+TEST_POLICY;
@@ -190,21 +176,8 @@ public class BrooklynRestApiLauncherTest {
         headers.put("Content-Type", "application/json");
 
         HttpToolResponse response = HttpTool.httpPost(httpClient, Urls.toUri(testUrl), headers, body.getBytes(CHARSET_NAME));
-        LOG.error("response --> " + response.getContentAsString());
         HttpAsserts.assertHealthyStatusCode(response.getResponseCode());
-        LOG.error("all applications --> " + managementContext.getApplications());
     }
 
-    @Test
-    public void testClassLoaderPolicies() throws Exception {
-        LOG.error("*** *** 1" + managementContext);
-        LOG.error("*** *** 2" + managementContext.getCatalogClassLoader());
-        LOG.error("*** *** 3" + TEST_POLICY);
-        LOG.error("*** *** 5" + managementContext.getTypeRegistry().getAll());
-        LOG.error("*** *** 4" + managementContext.getCatalogClassLoader().loadClass(TEST_POLICY));
-        // get libs then get class loader
-        // then use this as the class loader for the lookup
-
-    }
 }
 
